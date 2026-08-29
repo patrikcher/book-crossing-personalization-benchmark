@@ -1,6 +1,6 @@
 # Book-Crossing Personalization-Tier Benchmark
 
-**Status: in progress — Tiers 1-2 of 4 complete.** The verdict, full comparison table, and trade-off section below get filled in once all four tiers are done.
+**Status: in progress — Tiers 1-3 of 4 complete.** The verdict, full comparison table, and trade-off section below get filled in once all four tiers are done.
 
 ## What this is
 
@@ -23,7 +23,7 @@ Each tier is a strictly bigger step in modeling complexity than the last, evalua
 
 2. **Item-based collaborative filtering** — scores a candidate book as the summed cosine similarity between it and every book already in a user's train history, where each book's "vector" is which users interacted with it. Falls back to the popularity score for the minority of users whose history has literally zero co-occurrence with anything else in the catalog (a measured fallback rate, not an assumed one). Results: `reports/eval_itemcf.md`
 
-3. **Matrix factorization (implicit-feedback variant)** — learns latent user and item vectors directly from the interaction matrix (ALS-for-implicit) instead of hand-computing similarity. Can pick up patterns item-CF structurally can't — e.g. two books that were never read by the same person but appeal to the same kind of reader. Not yet built.
+3. **Matrix factorization (implicit-feedback variant)** — learns latent user and item vectors directly from the interaction matrix (ALS-for-implicit) instead of hand-computing similarity. Can pick up patterns item-CF structurally can't — e.g. two books that were never read by the same person but appeal to the same kind of reader. Results: `reports/eval_mf.md`
 
 4. **Hybrid / content-aware** — blends the matrix-factorization signal with content embeddings of book descriptions, aimed at making reasonable recommendations for books with little or no interaction history by leaning on what a book is about rather than who's read it. Bounded by the description-coverage limitation noted below. Not yet built.
 
@@ -74,9 +74,11 @@ python scripts/make_split.py
 # 5. Fit + evaluate each tier (writes reports/eval_<tier>.md and data/processed/eval_<tier>_per_user.parquet)
 python scripts/eval_baseline.py   # Tier 1: popularity
 python scripts/eval_itemcf.py     # Tier 2: item-based CF
+python scripts/eval_mf.py         # Tier 3: matrix factorization
 
-# 6. Paired significance test between two tiers, per bucket
+# 6. Paired significance test between any two tiers, per bucket
 python scripts/compare_tiers.py popularity itemcf --metric ndcg@10
+python scripts/compare_tiers.py itemcf mf --metric ndcg@10
 ```
 
 Every number in the eventual write-up should be reproducible from this sequence. Raw data and generated `data/processed/` outputs are gitignored (~123MB). Step 2 regenerates them.
