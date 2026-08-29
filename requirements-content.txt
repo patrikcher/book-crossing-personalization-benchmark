@@ -1,0 +1,5 @@
+# Additional deps for Tier 4 (hybrid/content-aware) — Week 3.
+# Kept separate from requirements.txt because sentence-transformers pulls in torch
+# (large download) that isn't needed for Tiers 1-3.
+-r requirements.txt
+sentence-transformers>=2.5
