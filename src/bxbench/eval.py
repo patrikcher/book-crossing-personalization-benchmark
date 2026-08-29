@@ -18,7 +18,7 @@ split.py), Recall@K reduces to Hit-Rate@K (0 or 1), and Precision@K = Recall@K
 """
 
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Sequence
 
 import numpy as np
@@ -39,6 +39,11 @@ class EvalResult:
     overall: pd.Series  # aggregated metrics across all test users
     mean_inference_latency_ms: float
     n_users_evaluated: int
+    # populated only for user_ids passed via evaluate(..., trace_users=...):
+    # user_id -> {"candidates": [ISBN...], "scores": [float...], "rank": int}.
+    # Captured for free during the same loop every user goes through, purely
+    # for human/notebook inspection -- doesn't change scoring or metrics.
+    traces: dict = field(default_factory=dict)
 
 
 def _ndcg_at_k(rank: int, k: int) -> float:
@@ -75,6 +80,7 @@ def evaluate(
     k_list: Sequence[int] = DEFAULT_K_LIST,
     n_neg: int = DEFAULT_N_NEG,
     seed: int = DEFAULT_SEED,
+    trace_users: set | None = None,
 ) -> EvalResult:
     rng = np.random.default_rng(seed)
     item_pool = train["ISBN"].unique()
@@ -83,6 +89,7 @@ def evaluate(
 
     rows: list[dict] = []
     latencies: list[float] = []
+    traces: dict = {}
 
     # NOTE: "User-ID" / "ISBN" aren't valid Python identifiers (hyphen), so
     # itertuples() would silently rename them to positional fields -- zip
@@ -98,6 +105,13 @@ def evaluate(
 
         order = np.argsort(-np.asarray(scores, dtype=float))
         rank = int(np.where(order == 0)[0][0])  # position of pos_item (index 0)
+
+        if trace_users is not None and user_id in trace_users:
+            traces[user_id] = {
+                "candidates": list(candidates),
+                "scores": [float(s) for s in scores],
+                "rank": rank,
+            }
 
         rec: dict = {
             "User-ID": user_id,
@@ -134,4 +148,5 @@ def evaluate(
         overall=overall,
         mean_inference_latency_ms=float(np.mean(latencies)) if latencies else float("nan"),
         n_users_evaluated=len(per_user),
+        traces=traces,
     )

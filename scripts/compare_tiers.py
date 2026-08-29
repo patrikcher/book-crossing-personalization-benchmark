@@ -37,6 +37,11 @@ def render(result: pd.DataFrame, tier_a: str, tier_b: str, metric: str) -> str:
             v = row[c]
             if c == "n_users":
                 cells.append(f"{int(v):,}")
+            elif c == "p_value" and pd.notna(v) and v < 0.0001:
+                # "0.0000" reads as exactly zero; a paired Wilcoxon p-value
+                # never actually is, so say "very small" instead of rounding
+                # it away.
+                cells.append("<0.0001")
             elif isinstance(v, float):
                 cells.append(f"{v:.4f}" if pd.notna(v) else "—")
             else:
